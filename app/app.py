@@ -1,64 +1,62 @@
-from random import randint
-from flask import Flask, render_template, url_for
-from faker import Faker
-
-fake = Faker()
+from flask import Flask, render_template, jsonify, request, session, redirect, url_for
+from functools import wraps
+import jwt
+import datetime
+import base64
 
 app = Flask(__name__)
 application = app
+app.config.from_pyfile('config.py')
 
-images_ids = ['6e12f3de-d5fd-4ebb-855b-8cbc485278b7',
-              '2d2ab7df-cdbc-48a8-a936-35bba702def5',
-              '7d4e9175-95ea-4c5f-8be5-92a6b708bb3c',
-              'afc2cfe7-5cac-4b80-9b9a-d5c65ef0c728',
-              'cab5b7f2-774e-4884-a200-0c0180fa777f']
+with open("/home/std/web-dev-2020/lab1/app/lena.jpg", "rb") as img:
+    encoded_string = base64.b64encode(img.read())
 
-images_avatar = [
-              '9j2YK2qIbco',
-              'Eze84qlqgdQ',
-              'G652xF3AjdA',
-              'btOYR4_xbII',
-              '_blOLQ2PV8o',
-              'X7v2OsoKm0w'
-              ]              
-           
 
-def generate_comments(replies=True):
-    comments = []
-    for i in range(randint(1, 3)):
-        comment = { 'avatar': f'{images_avatar[i]}.jpg', 'author': fake.name(), 'text': fake.text() }
-        comments.append(comment)
-        if replies:
-            comment['replies'] = generate_comments(replies=False)
-            
-    return comments
+def get_users():
+    return [{'user_id': '1', 'login': 'lena', 'password': 'qwerty'}]
 
-def generate_post(i):
-    return {
-        'title': 'Заголовок поста',
-        'text': fake.paragraph(nb_sentences=100),
-        'author': fake.name(),
-        'date': fake.date_time_between(start_date='-2y', end_date='now'),
-        'image_filename': f'{images_ids[i]}.jpg',
-        'comments': generate_comments()
-    }
+def check_for_token(func):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        token = request.args.get('token')
+        if not token:
+            return jsonify({'message': 'no access!'}), 403
+        try:
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+        except:
+            return jsonify({'message': 'Invalid token'}), 403
+        return func(*args, **kwargs)
+    return wrapped
 
-posts_list = sorted([generate_post(i) for i in range(5)], key=lambda p: p['date'], reverse=True)
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/posts')
-def posts():
-    title = 'Посты'
-    return render_template('posts.html', title=title, posts=posts_list)
+@app.route('/secret_page')
+@check_for_token
+def secret_page():
+    return jsonify({'current_time': datetime.datetime.now(), 'message': 'Petrenko EA 191-352', 'img': encoded_string.decode('utf-8')})
 
-@app.route('/posts/<int:index>')
-def post(index):
-    p = posts_list[index]
-    return render_template('post.html', title=p['title'], post=p)
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    username = request.args.get('login') or request.form.get('login')
+    password = request.args.get('password') or request.form.get('password')
+    if username and password:
+        for user in get_users():
+            if user['login'] == username and user['password'] == password:
+                session['logged_in'] = True
+                token = jwt.encode({
+                    'user': username,
+                    'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=90)
+                },
+                app.config['SECRET_KEY'])
+                # return redirect(url_for('secret_page.html'+'?token='+token))
+                # return render_template('secret_page.html'+'?token='+token)
+                return jsonify({'token': token})
+            else:
+                return jsonify({'message': 'no access'}), 403
+    return render_template('login.html')
 
-@app.route('/about')
-def about():
-    title = 'Об авторе'
-    return render_template('about.html', title=title)
+if __name__ == '__main__':
+    app.run(debug=True)

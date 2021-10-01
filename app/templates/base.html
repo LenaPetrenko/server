@@ -12,7 +12,7 @@
         {% if title %}
           {{ title }}
         {% else %}
-          Лабораторная работа №1    
+          Лабораторная работа №8
         {% endif %}
     </title>
     
@@ -20,17 +20,20 @@
   <body class = "d-flex flex-column justify-content-between min-vh-100">
     <header class="container-fluid">
         <nav class="row navbar navbar-expand-sm navbar-dark bg-dark">
-            <a class="navbar-brand" href="{{url_for('index')}}">Лабораторная работа №1</a>
+            <a class="navbar-brand" href="{{url_for('index')}}">Лабораторная работа №8</a>
             <button class="navbar-toggler d-lg-none" type="button" data-toggle="collapse" data-target="#collapsibleNavId" aria-controls="collapsibleNavId"
                 aria-expanded="false" aria-label="Toggle navigation"></button>
              <div class="collapse navbar-collapse" id="collapsibleNavId">
                 <ul class="navbar-nav ml-auto mt-2 mt-lg-0"> 
-                    <li class="nav-item active">
-                        <a class="nav-link" href="{{url_for('posts')}}">Посты</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{url_for('about')}}">Об авторе</a>
-                    </li>
+                  <li class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
+                    <a class="nav-link " href="{{url_for('index') }}">Задание</a>
+                </li>
+                <li class="nav-item mr-5">
+                  <a class="nav-link" href="{{ url_for('secret_page') }}">Секретная страница</a>
+              </li>
+                <li class="nav-item mr-5">
+                    <a class="nav-link" href="{{ url_for('login') }}">Войти</a>
+                </li>
                 </ul>
             </div>
         </nav>
